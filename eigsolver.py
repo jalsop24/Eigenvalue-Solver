@@ -12,11 +12,9 @@ import scipy.sparse.linalg as SLA
 import matplotlib.pyplot as plt
 import time
 from src.makepath import makepath
-from src.hamiltonian import generateH, generateHsp, genH2P, genH2Psp
-import src.wavefunction as wf
+from src.hamiltonian import generateH, generateHsp, genH2Psp
 import src.potential as potential
-# from src.inversePower import solve
-# from src.eigGPU import solve as solveGPU
+import src.gpuSolver as eigGPU
 
 outDir = "./data/"
 
@@ -26,17 +24,17 @@ Nx = 1000
 
 m = 1
 
-Xa = -40
-Xb = 40
+Xa = -50
+Xb = 50
 dx = (Xb-Xa)/(Nx-1)
 
-Ni = 1
+Ni = 20
 
 hbar = 1
 
-clip = 15
+clip = 50
 
-x = np.linspace(Xa,Xb,Nx)
+x = np.linspace(Xa,Xb,Nx, dtype=np.complex64)
 
 w = 0.07
 
@@ -101,7 +99,7 @@ def coloumbPot(index_diff):
     
     distance = abs(index_diff * dx)
     
-    e0 = 1
+    e0 = 0.05
     
     if distance < dx:
         return 1/(4*np.pi*e0*dx)
@@ -114,7 +112,7 @@ def coloumbPot(index_diff):
 
 t0 = time.time()
 
-V = 0.5 * m * w**2 * x**2
+# V = potential.harmonic(m, w, x)
 
 V = potential.doubleDot(Vmax=0.1, a=0, b=15, x=x)
 
@@ -126,9 +124,9 @@ V = potential.doubleDot(Vmax=0.1, a=0, b=15, x=x)
 
 t1 = time.time()
 
-# H = generateHsp(dx, m, hbar, Nx) + sp.dia_matrix((V, [0]), shape=(Nx, Nx), dtype=np.complex64)
+H = generateHsp(dx, m, hbar, Nx, dtype=np.complex64) + sp.dia_matrix((V, [0]), shape=(Nx, Nx), dtype=np.complex64)
 
-H, V2 = genH2Psp(dx, m, hbar, Nx, Vi = V, Vc=coloumbPot)
+# H, V2 = genH2Psp(dx, m, hbar, Nx, Vi = V)
 
 
 # eVals, eVecs = LA.eigh( H, eigvals_only=False, subset_by_index=[0, min(clip, Nx) - 1] )
@@ -140,12 +138,11 @@ t2 = time.time()
 
 for i in range(Ni):
     # print(i)
-    # eVals, eVecs = solve(H, eVals, eVecs, clip=50)
-    # eVals, eVecs = solveGPU(H)
     # eVals, eVecs = LA.eigh( H, eigvals_only=False, subset_by_index=[0, min(clip, Nx) - 1] )
-    eVals, eVecs = SLA.eigsh( H, k=min(clip, Nx-2), sigma=0, return_eigenvectors=True, tol = 0.01, ncv=int(2*clip))
-    # eVals = SLA.eigsh( H, k=min(clip, Nx-2), sigma=0, return_eigenvectors=False)
-    
+    # eVals, eVecs = SLA.eigsh( H, k=min(clip, Nx-2), sigma=0, return_eigenvectors=True)
+    # eVals = SLA.eigsh( H.tocsr(), k=min(clip, Nx-2), sigma=0, return_eigenvectors=False)
+    # eVals, eVecs = eigGPU.solve_sp(H, dtype=np.float64)
+    eVals, eVecs = eigGPU.solve(H.toarray())
 
 t3 = time.time()
 
@@ -160,14 +157,16 @@ print(f"Total time: {dt}")
 print(f"Average time per iteration: {idt}")
 print(f"dt1 = {dt1},\ndt2 = {dt2}")
 
+
 makepath(experimentName)
 
 with open(outDir + experimentName + "/params.txt", "w+") as file:
     file.write( f"Nx = {Nx},\nXa = {Xa},\nXb = {Xb},\nNi = {Ni},\nidt = {idt},\ndt = {dt},\nw = {w}" ) 
     
 np.savetxt(outDir + experimentName + "/values.txt", eVals )
+np.savetxt(outDir + experimentName + "/vectors.txt", eVecs )
 
-n = 2
+n = 10
 
 n = min(n, len(eVecs[1])-1)
 
@@ -188,7 +187,7 @@ ax1.set_title("Energy Eigenvalues")
 # y = np.sqrt(a) * x
 # eig3 = np.power(a/np.pi, 0.25) * np.power(3, -0.5) * ( 2*y**3 - 3*y ) * np.exp(-0.5*y**2 )
 
-eigOut = eVecs[:,n]
+eigOut = eVecs[:,n] # eVecs 
 
 # print( norm(eig3, dx) )
 # print( norm(eigOut, dx))
@@ -198,9 +197,9 @@ eigOut = normalise(eigOut, dx)
 # print( norm(eigOut, dx) )
 
 ax2 = fig.add_subplot(1, 2, 2, aspect=100)
-ax2.plot(x, prob1(eigOut) )
-ax2.plot(x, prob2(eigOut) )
-# ax2.plot(x, prob(eigOut) )
+# ax2.plot(x, prob1(eigOut) )
+# ax2.plot(x, prob2(eigOut) )
+ax2.plot(x, prob(eigOut) )
 ax2.plot(x, V)
 # ax2.plot(x, prob(eig3) )
 ylim = 0.5
