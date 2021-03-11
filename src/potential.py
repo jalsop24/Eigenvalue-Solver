@@ -15,7 +15,8 @@ def doubleDot(Vmax, a, b, x):
     return V
     
     
-
+def harmonic(m, w, x):
+    return 0.5 * m * w**2 * np.square(x)
 
 # Vmax = 1
 # a = 0

@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Feb 23 22:16:01 2021
 
-@author: James
+Taken from pySL:
+
+H. V. Lepage
+A. A. Lasek
+C. H. W. Barnes
+
+
 """
 
 import os
