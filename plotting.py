@@ -12,32 +12,34 @@ import matplotlib.pyplot as plt
 
 
 
-experimentName = "Harmonic 1D Nx = 10 - 4000 sparse eigs only"
+experimentName = "FFT/Harmonic 1 Particle Nx = 500 - 89000"
 
 inDir = "./data/" + experimentName
 
-plotType = "sqrt"
+plotType = "normal"
 
-xData = np.loadtxt(inDir + "/Nx_values.txt")
+xLabel = "Nx"
+
+
+
+xData = np.loadtxt(inDir + "/x_values.txt")
 tData = np.loadtxt(inDir + "/dt_values.txt")
-
-
 
 if plotType == "normal":
     plt.plot(xData, tData )
-    plt.xlabel("Nx")
+    plt.xlabel(xLabel)
     plt.ylabel(" Time to solve / s ")
 elif plotType == "sqrt":
     plt.plot(xData, np.sqrt(tData) )
-    plt.xlabel("Nx")
+    plt.xlabel(xLabel)
     plt.ylabel(" $ (T / s)^{0.5} $ ")
 elif plotType == "log":
     plt.plot(xData, np.log(tData) )
-    plt.xlabel("Nx")
+    plt.xlabel(xLabel)
     plt.ylabel(" $ ln(T / s) $ ")
 
 
-
+plt.savefig(inDir + "/plot-" + plotType + ".png")
 
 
 

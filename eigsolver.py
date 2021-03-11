@@ -15,12 +15,14 @@ from src.makepath import makepath
 from src.hamiltonian import generateH, generateHsp, genH2Psp
 import src.potential as potential
 import src.gpuSolver as eigGPU
+from src.wavefunction import wavefunction
+from src.fftSolver import solve as fftSolver
 
 outDir = "./data/"
 
 experimentName = "test"
 
-Nx = 1000
+Nx = 500
 
 m = 1
 
@@ -28,72 +30,23 @@ Xa = -50
 Xb = 50
 dx = (Xb-Xa)/(Nx-1)
 
-Ni = 20
+Ni = 100
 
 hbar = 1
 
 clip = 50
 
-x = np.linspace(Xa,Xb,Nx, dtype=np.complex64)
+n = 10
+
+N = 100
 
 w = 0.07
 
+
+
+x = np.linspace(Xa,Xb,Nx, dtype=np.float64)
+
 eVals, eVecs = None, None
-
-# print("Init H")
- 
-    
-def norm(v, dx):
-    return np.sqrt( np.inner(np.conjugate(v), v) * dx )
-
-def normalise(v, dx):
-    return v / norm(v, dx)
-
-def prob(v):
-    return v.conjugate() * v
-
-def prob1(v):
-    
-    size =  int( np.sqrt(v.size) )
-    
-    p = np.zeros( size )
-    
-    #print(size)
-    
-    mod2 = prob(v)
-    
-    #print(mod2.size)
-    
-    mod2 = np.reshape(mod2, [size, size] )
-    
-    #print(mod2.shape)
-    
-    for i in range(size):
-        p[i] = np.sum( mod2[i,:] )
-    
-    return p
-
-def prob2(v):
-    
-    size =  int( np.sqrt(v.size) )
-    
-    p = np.zeros( size )
-    
-    #print(size)
-    
-    mod2 = prob(v)
-    
-    #print(mod2.size)
-    
-    mod2 = np.reshape(mod2, [size, size] )
-    
-    #print(mod2.shape)
-    
-    for i in range(size):
-        p[i] = np.sum( mod2[:,i] )
-    
-    return p
-    
     
 def coloumbPot(index_diff):
     
@@ -112,9 +65,9 @@ def coloumbPot(index_diff):
 
 t0 = time.time()
 
-# V = potential.harmonic(m, w, x)
+V = potential.harmonic(m, w, x)
 
-V = potential.doubleDot(Vmax=0.1, a=0, b=15, x=x)
+# V = potential.doubleDot(Vmax=0.1, a=0, b=15, x=x)
 
 
 # HK = generateH(dx, m, hbar, Nx)
@@ -124,7 +77,7 @@ V = potential.doubleDot(Vmax=0.1, a=0, b=15, x=x)
 
 t1 = time.time()
 
-H = generateHsp(dx, m, hbar, Nx, dtype=np.complex64) + sp.dia_matrix((V, [0]), shape=(Nx, Nx), dtype=np.complex64)
+H = generateHsp(dx, m, hbar, Nx, dtype=np.float64) + sp.dia_matrix((V, [0]), shape=(Nx, Nx), dtype=np.float64)
 
 # H, V2 = genH2Psp(dx, m, hbar, Nx, Vi = V)
 
@@ -133,16 +86,20 @@ H = generateHsp(dx, m, hbar, Nx, dtype=np.complex64) + sp.dia_matrix((V, [0]), s
 
 # Hcsr = sp.csr_matrix(H)
 
+#eVals, eVecs = solve(H.toarray())
+# eVals, eVecs = SLA.eigsh( H, k=min(clip, Nx-2), sigma=0, return_eigenvectors=True)
 
 t2 = time.time()
 
 for i in range(Ni):
     # print(i)
     # eVals, eVecs = LA.eigh( H, eigvals_only=False, subset_by_index=[0, min(clip, Nx) - 1] )
+    # eVals, eVecs = np.linalg.eigh(H.toarray())
     # eVals, eVecs = SLA.eigsh( H, k=min(clip, Nx-2), sigma=0, return_eigenvectors=True)
     # eVals = SLA.eigsh( H.tocsr(), k=min(clip, Nx-2), sigma=0, return_eigenvectors=False)
-    # eVals, eVecs = eigGPU.solve_sp(H, dtype=np.float64)
-    eVals, eVecs = eigGPU.solve(H.toarray())
+    # eVals, eVecs = eigGPU.solve_sp(H, k=min(clip, Nx-2), mu0=eVals, x0=eVecs, dtype=np.float64) # Returns zeros
+    # eVals, eVecs = eigGPU.solve(H.toarray()) # CUSOLVER_STATUS_EXECUTION_FAILED
+    eVals, eVecs = fftSolver(H, N, k=min(clip, Nx-1), sigma=0)
 
 t3 = time.time()
 
@@ -166,9 +123,7 @@ with open(outDir + experimentName + "/params.txt", "w+") as file:
 np.savetxt(outDir + experimentName + "/values.txt", eVals )
 np.savetxt(outDir + experimentName + "/vectors.txt", eVecs )
 
-n = 10
-
-n = min(n, len(eVecs[1])-1)
+n = min(n, len(eVecs[0])-1)
 
 fig = plt.figure(dpi=400, figsize=(16, 7))
 
@@ -192,14 +147,14 @@ eigOut = eVecs[:,n] # eVecs
 # print( norm(eig3, dx) )
 # print( norm(eigOut, dx))
 
-eigOut = normalise(eigOut, dx)
+eigOut = wavefunction(eigOut, Nx).normalise(dx)
 
 # print( norm(eigOut, dx) )
 
 ax2 = fig.add_subplot(1, 2, 2, aspect=100)
-# ax2.plot(x, prob1(eigOut) )
-# ax2.plot(x, prob2(eigOut) )
-ax2.plot(x, prob(eigOut) )
+# ax2.plot(x, eigOut.prob1() )
+# ax2.plot(x, eigOut.prob2() )
+ax2.plot(x, eigOut.prob() )
 ax2.plot(x, V)
 # ax2.plot(x, prob(eig3) )
 ylim = 0.5
