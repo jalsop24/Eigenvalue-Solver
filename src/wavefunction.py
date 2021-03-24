@@ -32,11 +32,11 @@ class wavefunction:
 
     def normalise(self, dx):
         v = self.Data
-        return wavefunction( v / self.norm(dx), self.Nx, self.Particles)
+        return wavefunction( v.copy() / self.norm(dx), self.Nx, self.Particles)
     
     def prob(self, n=None):
         v = self.Data
-        if self.Particles == 1 or n == None:
+        if self.Particles == 1:
             return v.conjugate() * v
         elif n == 1:
             return self.prob1()
