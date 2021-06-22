@@ -16,3 +16,5 @@ def index(ind, inds, sizes, dim, p = 1):
         stride = temp // sizes[i % dim]
         inds[i] = ind // stride
         ind = ind - inds[i] * stride
+        
+    

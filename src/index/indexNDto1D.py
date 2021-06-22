@@ -2,9 +2,8 @@
 # Take a  indices for each dimension of the wave function (x/y/z for each particle) and return a 1D index
 ################################################################################################################################
 
-def index(inds, sizes, dim, p = 0):
-    if (p == 0):
-        p = params["Np"]
+def index(inds, sizes, dim, p = 1):
+
 
     indOut = 0
     l = p * dim

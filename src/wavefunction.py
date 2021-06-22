@@ -43,6 +43,10 @@ class wavefunction:
         elif n == 2: 
             return self.prob2()
     
+    def inner(self, other, dx):
+        return np.abs( np.inner(self.Data.conj(), other.Data) )*dx
+
+    
     def prob1(self):
         
         v = self.Data

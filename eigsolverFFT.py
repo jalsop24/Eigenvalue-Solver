@@ -18,8 +18,10 @@ from src.makepath import makepath
 from src.hamiltonian import generateH, generateHsp, genH2Psp
 import src.potential as potential
 from src.wavefunction import wavefunction
-from src.fftSolver import solve as fftSolver
+import src.fftSolver as fftSolver
 from src.fftSolver import transformH 
+
+
 
 experimentName = "test"
 
@@ -83,14 +85,14 @@ H = generateHsp(dx, m, hbar, Nx, V, dtype=np.complex64)
 
 
 
-HFFT, times = transformH(H.tocsr(), N)
+Hk, times = transformH(H, N)
 
-HK = HFFT.copy()
+HK = Hk.copy()
 
 t0 = time()
 # eVals, eVecs, dts = fftSolver(H, N, p=2, eigvals_only=False, subset_by_index=[0, min(clip, Nx-1)] )
 eVals, eVecs = sp.linalg.eigsh( H.tocsr() , k=min(clip, Nx-2), sigma=0, return_eigenvectors=True)
-eValsK, eVecsK = scipy.linalg.eigh(HFFT, eigvals_only=False, subset_by_index=[0, min(clip, Nx)-1]  )
+eValsK, eVecsK = scipy.linalg.eigh(Hk, eigvals_only=False, subset_by_index=[0, min(clip, Nx)-1]  )
 t1 = time()
 
 
@@ -134,10 +136,8 @@ arg1 = np.angle(eigK.Data)
 arg2 = np.angle(eigOut2.Data)
 
 
-
-
-
 # ftreal = FT(eigOutFFT.Data.real) 
+
 
 
 

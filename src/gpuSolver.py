@@ -228,14 +228,14 @@ def solve(H):
     
     H=np.reshape(H.ravel(), [PsiSize, PsiSize], order='F')
     
-    D=np.zeros(PsiSize, dtype=np.float32)
+    D=np.zeros(PsiSize, dtype=H.dtype)
     
     H_gpu = gpuarray.to_gpu(H)
     
     linalg.init()
     V_gpu, D_gpu = linalg.eig(H_gpu, 'N', 'V')
     
-    print(D_gpu.dtype)
+    # print(D_gpu.dtype)
     
     V_gpu.get(H) 
     D_gpu.get(D)

@@ -13,6 +13,12 @@ import src.index.indexNDto1D as indexNDto1D
 import math
 # from numba import jit
 import scipy
+from skcuda import linalg as sklinalg
+# from skcuda.fft import fft, ifft, Plan as skfft, skifft, Plan
+import pycuda.gpuarray as gpuarray
+import pycuda.autoinit
+
+sklinalg.init()
 
 from time import time
 
@@ -197,7 +203,7 @@ def transformH(H, N, p=1):
         
         t3 = time()
         
-        HFFT = fftMat2 @ mult # Significant expense
+        HFFT = fftMat2 @ mult # Significant compute expense
         
         t4 = time()
         
@@ -242,6 +248,52 @@ def solve(H, N, p, **kwargs):
     
     if p == 1:
         
+        # eVecsK = pad( eVecsK , size)
+        
+        eVecsK = fftshift(  pad( eVecsK , size) , axes=0)
+    
+        eVecs = iFT(eVecsK, axis=0)
+    
+    else:
+        
+        Nx = int(np.sqrt(size))
+        
+        eVecs = fftMat(Nx, N) @ eVecsK
+    
+    
+    times.append(t1-t0)
+    
+    return eVals, eVecsK, times
+    
+
+
+
+def solve_gpu(H, N, p, **kwargs):
+    
+    size = H.shape[0]
+    
+    HFFT, times = transformH(H, N, p)
+    
+    #print(HFFT)
+    
+    HGPU = gpuarray.to_gpu(HFFT)  # .reshape( HFFT.shape[0], HFFT.shape[1], order="F") )
+    
+    t0 = time()
+    
+    #eVals, eVecsK = sp.linalg.eigsh(HFFT, **kwargs)
+    
+    eVecsK, eVals = sklinalg.eig(HGPU, **kwargs)
+    
+    t1 = time()
+    
+    eVals = eVals.get()
+    eVecsK = eVecsK.get()
+    
+    eVecs = None
+    
+    if p == 1:
+
+        
         eVecsK = fftshift(  pad( eVecsK , size) , axes=0)
     
         eVecs = iFT(eVecsK, axis=0)
@@ -256,10 +308,6 @@ def solve(H, N, p, **kwargs):
     times.append(t1-t0)
     
     return eVals, eVecs, times
-    
-    
-    
-    
 
 
 
